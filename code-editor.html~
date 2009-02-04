@@ -1,0 +1,9 @@
+<html>
+    <script type="text/javascript" src="vi-online.js"></script>
+    <title>foo</title>
+    <body>
+        <form>
+            <textarea id="editor" cols="100" rows="80"></textarea>
+        </form>
+    </body>
+</html>
