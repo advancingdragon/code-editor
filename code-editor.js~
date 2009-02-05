@@ -65,7 +65,7 @@ if (window.addEventListener) { // W3C compliant browsers
             } else if (window.event.keyCode === KEY_BACK && 
                        getSelection(editor) === "") {
                 // proceed if nothing is selected
-                var moved = moveSelectionRange(editor, -4, 0); // to cope with beginning of text TODO NOT IMPLEMENTED YET
+                moveSelectionRange(editor, -4, 0);
                 var sel = getSelection(editor);
                 //alert(sel);
                 if (sel === TAB_REPLACE) {
