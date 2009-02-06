@@ -72,11 +72,12 @@ var stopDefault = function(e) {
 var selectLine = function(elem) {
     var c = "";
     var moved = 0;
-    while (c !== "\n" && moveSelectionStart(elem, -1) === -1) {
+    // Internet Exploder uses vertical tab for some reason
+    while ((c !== "\n" && c !== "\x0D") && moveSelectionStart(elem, -1) === -1) {
         c = getSelection(elem).charAt(0);
         moved -= 1;
     }
-    if (c === "\n") {
+    if (c === "\n" || c === "\x0D") {
         moveSelectionStart(elem, 1);
         moved += 1;
     }

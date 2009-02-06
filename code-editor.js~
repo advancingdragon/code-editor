@@ -72,13 +72,17 @@ var stopDefault = function(e) {
 var selectLine = function(elem) {
     var c = "";
     var moved = 0;
-    while (c !== "\n" && moveSelectionStart(elem, -1) === -1) {
+    // Internet Exploder uses vertical tab for some reason
+    while ((c !== "\n" && c !== "\x0D") && moveSelectionStart(elem, -1) === -1) {
         c = getSelection(elem).charAt(0);
         moved -= 1;
     }
     if (c === "\n") {
         moveSelectionStart(elem, 1);
         moved += 1;
+    } else if (c === "\x0D") {
+        moveSelectionStart(elem, 2);
+        moved += 2;
     }
     return moved;
 };
@@ -102,7 +106,6 @@ var onKeyDownCallback = function(editor, e) {
         }
     } else if (e.keyCode === KEY_ENTER) { // autoindent
         moved = selectLine(editor);
-        //alert(moved);
         var spaces = getSelection(editor).match(/(\s*)/)[0];
         moveSelectionStart(editor, -moved);
         setTimeout(function() {
