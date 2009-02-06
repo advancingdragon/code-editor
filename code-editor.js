@@ -68,21 +68,45 @@ var stopDefault = function(e) {
     }
 };
 
+// move selection start to the beginning of the line
+var selectLine = function(elem) {
+    var c = "";
+    var moved = 0;
+    while (c !== "\n" && moveSelectionStart(elem, -1) === -1) {
+        c = getSelection(elem).charAt(0);
+        moved -= 1;
+    }
+    if (c === "\n") {
+        moveSelectionStart(elem, 1);
+        moved += 1;
+    }
+    return moved;
+};
+
 var onKeyDownCallback = function(editor, e) {
-    if (e.keyCode === KEY_TAB) {
+    var moved;
+    if (e.keyCode === KEY_TAB) { // insert soft-tab
         stopDefault(e);
         replaceSelection(editor, TAB_REPLACE, false);
     } else if (e.keyCode === KEY_BACK && 
                getSelection(editor) === "") {
         // proceed if only nothing is selected
-        var moved = moveSelectionStart(editor, -TAB_REPLACE.length); // to cope with beginning of text TODO NOT IMPLEMENTED YET
+        moved = moveSelectionStart(editor, -TAB_REPLACE.length);
         var sel = getSelection(editor);
         if (sel === TAB_REPLACE) {
+            // if there is a soft-tab, then erase it with one keystroke
             stopDefault(e);
             replaceSelection(editor, "");
         } else {
             moveSelectionStart(editor, -moved);
         }
+    } else if (e.keyCode === KEY_ENTER) { // autoindent
+        moved = selectLine(editor);
+        var spaces = getSelection(editor).match(/(\s*)/)[0];
+        moveSelectionStart(editor, -moved);
+        setTimeout(function() {
+            replaceSelection(editor, spaces);
+        }, 0);
     }
 };
 
