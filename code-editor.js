@@ -4,37 +4,54 @@ var KEY_ENTER = 13;
 
 var TAB_REPLACE = "    ";
 
-var moveSelectionRange = function(element, start, end) {
-    if (element.selectionStart && element.selectionEnd) {
-        element.selectionStart = element.selectionStart + start;
-        element.selectionEnd = element.selectionEnd + end;
+// TODO A good method for detecting attempts to set beyond the selection end or before the beginning of the text
+var moveSelectionStart = function(elem, start) {
+    var moved; // how many chars actually moved
+    if (elem.selectionStart !== undefined) { // Firefox
+        if (elem.selectionStart + start < 0) { // if attempts to set before beginning of text
+            moved = -elem.selectionStart;
+            elem.selectionStart = 0;
+        } else {
+            moved = start;
+            elem.selectionStart = elem.selectionStart + start;
+        }
+        //alert(elem.selectionStart);
     } else {
         var range = document.selection.createRange();
-        range.moveStart("character", start);
-        range.moveEnd("character", end);
+        var beginRange = range.duplicate();
+        beginRange.moveToElementText(elem);
+        beginRange.setEndPoint("EndToStart", range);
+        if (beginRange.text.length < -start) { // if attempts to set befire beginning of text
+            moved = -beginRange.text.length;
+        } else {
+            moved = start;
+        }
+        range.moveStart("character", moved);
         range.select();
     }
+    return moved;
 };
-var getSelection = function(element) {
-    if (element.selectionStart && element.selectionEnd) {
-        return element.value.substring(element.selectionStart,
-                                       element.selectionEnd);
+
+var getSelection = function(elem) {
+    if (elem.selectionStart !== undefined && elem.selectionEnd !== undefined) { // stupid implicit type-casting
+        return elem.value.substring(elem.selectionStart,
+                                       elem.selectionEnd);
     } else {
         return document.selection.createRange().text;
     }
 };
 
-var replaceSelection = function(element, text, cursorAtStart) {
-    if (element.selectionStart && element.selectionEnd) { // Firefox
-        var start = element.selectionStart;
-        var end = element.selectionEnd;
-        var len = element.value.length;
+var replaceSelection = function(elem, text, cursorAtStart) {
+    if (elem.selectionStart !== undefined && elem.selectionEnd !== undefined) { // Firefox
+        var start = elem.selectionStart;
+        var end = elem.selectionEnd;
+        var len = elem.value.length;
 
-        element.value = element.value.substring(0, start) + 
+        elem.value = elem.value.substring(0, start) + 
             text + 
-            element.value.substring(end, len);
-        element.selectionStart = start + text.length;
-        element.selectionEnd = start + text.length;
+            elem.value.substring(end, len);
+        elem.selectionStart = start + text.length;
+        elem.selectionEnd = start + text.length;
     } else { // everything else
         var range = document.selection.createRange();
         range.text = text;
@@ -43,38 +60,45 @@ var replaceSelection = function(element, text, cursorAtStart) {
     }
 };
 
-if (window.addEventListener) { // W3C compliant browsers
-    window.addEventListener("load", function(e) {
-        var editor = document.getElementById("editor");
+var stopDefault = function(e) {
+    if (e.preventDefault) { // W3C method
+        e.preventDefault();
+    } else { // internet exploder
+        e.returnValue = false;
+    }
+};
 
-        editor.addEventListener("keydown", function(e) {
-            if (e.keyCode === KEY_TAB) {
-                e.preventDefault();
-                replaceSelection(editor, TAB_REPLACE, false);
-            }
-        }, false);
-    }, false);
-} else if (window.attachEvent) { // Internet Exploder
-    window.attachEvent("onload", function() {
-        var editor = document.getElementById("editor");
+var onKeyDownCallback = function(editor, e) {
+    if (e.keyCode === KEY_TAB) {
+        stopDefault(e);
+        replaceSelection(editor, TAB_REPLACE, false);
+    } else if (e.keyCode === KEY_BACK && 
+               getSelection(editor) === "") {
+        // proceed if only nothing is selected
+        var moved = moveSelectionStart(editor, -TAB_REPLACE.length); // to cope with beginning of text TODO NOT IMPLEMENTED YET
+        var sel = getSelection(editor);
+        if (sel === TAB_REPLACE) {
+            stopDefault(e);
+            replaceSelection(editor, "");
+        } else {
+            moveSelectionStart(editor, -moved);
+        }
+    }
+};
 
-        editor.attachEvent("onkeydown", function() {
-            if (window.event.keyCode === KEY_TAB) {
-                window.event.returnValue = false;
-                replaceSelection(editor, TAB_REPLACE, false);
-            } else if (window.event.keyCode === KEY_BACK && 
-                       getSelection(editor) === "") {
-                // proceed if nothing is selected
-                var moved = moveSelectionRange(editor, -4, 0); // to cope with beginning of text TODO NOT IMPLEMENTED YET
-                var sel = getSelection(editor);
-                //alert(sel);
-                if (sel === TAB_REPLACE) {
-                    window.event.returnValue = false;
-                    replaceSelection(editor, "");
-                } else {
-                    moveSelectionRange(editor, 4, 0);
-                }
-            }
+var addEventCallback = (window.addEventListener) ?
+    function(elem, name, callback) { // W3C Events
+        elem.addEventListener(name, callback, false);
+    } :
+    function(elem, name, callback) { // Internet Exploder
+        elem.attachEvent("on" + name, function() {
+            callback(window.event);
         });
+    };
+
+addEventCallback(window, "load", function(e) {
+    var editor = document.getElementById("editor");
+    addEventCallback(editor, "keydown", function(e) {
+        onKeyDownCallback(editor, e);
     });
-}
+});
